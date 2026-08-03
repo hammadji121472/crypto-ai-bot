@@ -1,20 +1,29 @@
-import base64
-import io
-from openai import OpenAI
+from google import genai
 from PIL import Image
 import streamlit as st
 
 st.set_page_config(
-    page_title="Crypto AI Trading Bot", page_icon="📈", layout="centered"
+    page_title="Crypto Gemini AI Bot", page_icon="📈", layout="centered"
 )
 
-st.title("🤖 Solana / Crypto Vision AI Bot")
-st.write("Chart ka screenshot upload karo, aur AI batayega ke trade leni hai ya nahi!")
+st.title("🤖 Solana / Crypto Gemini AI Bot")
+st.write(
+    "Seedha chart upload karo — API key ki koi tension nahi, AI foran signal"
+    " dega!"
+)
 
-api_key = st.text_input("Apni OpenAI API Key yahan enter karo:", type="password")
+try:
+  api_key = st.secrets["GEMINI_API_KEY"]
+except Exception:
+  api_key = None
 
-if api_key:
-  client = OpenAI(api_key=api_key)
+if not api_key:
+  st.error(
+      "⚠️ Streamlit Secrets mein GEMINI_API_KEY set nahi mili! App ki Settings"
+      " -> Secrets mein ja kar key add karo."
+  )
+else:
+  client = genai.Client(api_key=api_key)
 
   uploaded_file = st.file_uploader(
       "TradingView ka 15-min ya 1-hour chart upload karo...",
@@ -34,50 +43,23 @@ if api_key:
         "Koi khas baat batani hai? (Jaise: Main Buy karna chahta hoon)"
     )
 
-    if st.button("🔍 Chart Analyse Karo"):
-      with st.spinner("AI chart ko analyze kar raha hai..."):
-        try:
-          buffered = io.BytesIO()
-          image.save(buffered, format="JPEG")
-          encoded_image = base64.b64encode(buffered.getvalue()).decode("utf-8")
+    if st.button("🔍 Gemini se Analyse Karwayein"):
+      with st.spinner("Gemini AI chart ko analyze kar raha hai..."):
+        prompt_text = (
+            "You are an expert crypto day trader and technical analyst."
+            " Analyze this 15-minute or 1-hour cryptocurrency chart image."
+            " Look at indicators like RSI, moving averages (EMA/SMA),"
+            " support/resistance, and candlestick patterns. Give a clear"
+            " verdict: Should the user take a LONG (buy), SHORT (sell), or"
+            " STAY OUT? Provide entry zone, stop loss, and take profit"
+            " targets with a short reasoning."
+        )
+        if user_prompt:
+          prompt_text += f"\nUser's additional note: {user_prompt}"
 
-          prompt_text = (
-              "You are an expert crypto day trader and technical analyst."
-              " Analyze this 15-minute or 1-hour cryptocurrency chart image."
-              " Look at indicators like RSI, moving averages (EMA/SMA),"
-              " support/resistance, and candlestick patterns. Give a clear"
-              " verdict: Should the user take a LONG (buy), SHORT (sell), or"
-              " STAY OUT? Provide entry zone, stop loss, and take profit"
-              " targets with a short reasoning."
-          )
-          if user_prompt:
-            prompt_text += (
-                f"\nUser's additional note: {user_prompt}"
-            )
+        response = client.models.generate_content(
+            model="gemini-2.5-flash", contents=[image, prompt_text]
+        )
 
-          response = client.chat.completions.create(
-              model="gpt-4o",
-              messages=[
-                  {
-                      "role": "user",
-                      "content": [
-                          {"type": "text", "text": prompt_text},
-                          {
-                              "type": "image_url",
-                              "image_url": {
-                                  "url": f"data:image/jpeg;base64,{encoded_image}"
-                              },
-                          },
-                      ],
-                  }
-              ],
-              max_tokens=800,
-          )
-
-          st.subheader("📊 AI Analysis & Trade Verdict:")
-          st.write(response.choices[0].message.content)
-
-        except Exception as e:
-          st.error(f"Koi masla aa gaya: {e}")
-else:
-  st.warning("Pehle apni API Key oper enter karo taake bot chal sake.")
+        st.subheader("📊 Gemini AI Analysis & Trade Verdict:")
+        st.write(response.text)
