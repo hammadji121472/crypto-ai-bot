@@ -1,6 +1,6 @@
 import base64
 import io
-import openai
+from openai import OpenAI
 from PIL import Image
 import streamlit as st
 
@@ -14,7 +14,7 @@ st.write("Chart ka screenshot upload karo, aur AI batayega ke trade leni hai ya 
 api_key = st.text_input("Apni OpenAI API Key yahan enter karo:", type="password")
 
 if api_key:
-  openai.api_key = api_key
+  client = OpenAI(api_key=api_key)
 
   uploaded_file = st.file_uploader(
       "TradingView ka 15-min ya 1-hour chart upload karo...",
@@ -55,7 +55,7 @@ if api_key:
                 f"\nUser's additional note: {user_prompt}"
             )
 
-          response = openai.ChatCompletion.create(
+          response = client.chat.completions.create(
               model="gpt-4o",
               messages=[
                   {
