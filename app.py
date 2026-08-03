@@ -42,7 +42,7 @@ else:
             with st.spinner("AI chart ko parh raha hai, thoda sabar karo..."):
                 try:
                     response = client.models.generate_content(
-                        model="gemini-2.0-flash",
+                        model="gemini-1.5-flash",
                         contents=[image, prompt_text if prompt_text else "Analyze this crypto chart and give trading signals (Buy/Sell/Hold) with reasons based on technical indicators like RSI, EMA, and support/resistance."],
                     )
                     st.success("Analysis Tayar Hai! 🚀")
