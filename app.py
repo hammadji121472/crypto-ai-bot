@@ -3,40 +3,36 @@ import streamlit as st
 import yfinance as yf
 
 st.set_page_config(
-    page_title="Yahoo Pro Signal Bot", page_icon="⚡", layout="centered"
+    page_title="Pro Sniper Signal Bot", page_icon="🎯", layout="centered"
 )
 
-st.title("⚡ Pro Crypto Signal Bot (Yahoo Live Data)")
+st.title("🎯 Pro Crypto Sniper Bot (Strict Signals Only)")
 st.write(
-    "Yeh system Yahoo Finance se live data uthata hai — 100% working aur"
-    " error-free!"
+    "Sirf pakka signal milega — No Hold, No Bakwas. Entry lo ya door raho!"
 )
 
 st.divider()
 
-# Coin selection (Yahoo symbols format)
 coin_option = st.selectbox(
     "Coin Select Karein",
     ["SOL-USD", "BTC-USD", "ETH-USD", "BNB-USD", "PEPE20314-USD"],
 )
 interval = st.selectbox("Timeframe Select Karein", ["1h", "1d"])
 
-if st.button("🚀 Live Signal Check Karein"):
-  with st.spinner("Live data fetch ho raha hai..."):
+if st.button("🚀 Strict Signal Nikalein"):
+  with st.spinner("Market scan ho rahi hai..."):
     try:
-      # Yahoo Finance se data lana
       df = yf.download(
           coin_option, period="5d", interval="1h" if interval == "1h" else "1d"
       )
 
       if not df.empty:
-        # MultiIndex columns fix for yfinance newer versions
         if isinstance(df.columns, pd.MultiIndex):
           df.columns = df.columns.get_level_values(0)
 
         close_prices = df["Close"]
 
-        # RSI calculation
+        # RSI Calculation
         delta = close_prices.diff()
         gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
         loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
@@ -46,29 +42,50 @@ if st.button("🚀 Live Signal Check Karein"):
         current_price = float(close_prices.iloc[-1])
         current_rsi = float(rsi.iloc[-1])
 
-        st.success(
-            f"Data Mil Gaya! Current Price: **${current_price:.4f}** | RSI:"
+        st.info(
+            f"Current Price: **${current_price:.4f}** | RSI Value:"
             f" **{current_rsi:.2f}**"
         )
 
-        if current_rsi <= 32:
-          st.markdown(
-              "### 🟢 STRONG BUY SIGNAL (Oversold)"
-              f"Market oversold zone ({current_rsi:.2f}) mein hai. Yeh bounce"
-              " karne ka strong mauqa hai!"
+        # Strict Sniper Logic (No Hold allowed if not extreme)
+        if current_rsi <= 30:
+          # BUY SETUP
+          entry = current_price
+          sl = entry * 0.975  # 2.5% Stop Loss
+          tp = entry * 1.06  # 6% Take Profit
+
+          st.error(
+              "🟢 **STRONG BUY SIGNAL — ENTRY LO!**"
+          )  # error box for high visibility green look or success
+          st.success(
+              f"• **Action:** BUY / LONG\n"
+              f"• **Entry Price:** ${entry:.4f}\n"
+              f"• **Stop Loss (SL):** ${sl:.4f} (2.5% Risk)\n"
+              f"• **Take Profit (TP):** ${tp:.4f} (6% Profit)"
           )
-        elif current_rsi >= 68:
-          st.markdown(
-              "### 🔴 STRONG SELL SIGNAL (Overbought)"
-              f"Market overbought zone ({current_rsi:.2f}) mein hai. Yahan se"
-              " price gir sakti hai!"
+
+        elif current_rsi >= 70:
+          # SELL SETUP
+          entry = current_price
+          sl = entry * 1.025  # 2.5% Stop Loss above
+          tp = entry * 0.94  # 6% Take Profit below
+
+          st.error(
+              "🔴 **STRONG SELL SIGNAL — SHORT ENTRY LO!**\n\n"
+              f"• **Action:** SELL / SHORT\n"
+              f"• **Entry Price:** ${entry:.4f}\n"
+              f"• **Stop Loss (SL):** ${sl:.4f} (2.5% Risk)\n"
+              f"• **Take Profit (TP):** ${tp:.4f} (6% Profit)"
           )
+
         else:
-          st.markdown(
-              "### 🟡 HOLD / NEUTRAL"
-              f"RSI current level ({current_rsi:.2f}) par neutral hai. Mazeed"
-              " confirmation ka wait karein."
+          # NO ENTRY
+          st.warning(
+              "❌ **KOI SIGNAL NAHI — ABHI ENTRY MAT LO!**\nMarket beech mein"
+              " phansi hai (Neutral Zone). Fake breakout se bachne ke liye"
+              " bilkul trade mat karo, sabar karo."
           )
+
       else:
         st.error("Data nahi mila. Dobara koshish karein.")
     except Exception as e:
