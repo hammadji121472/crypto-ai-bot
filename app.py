@@ -17,14 +17,27 @@ coin_option = st.selectbox(
     "Coin Select Karein",
     ["SOL-USD", "BTC-USD", "ETH-USD", "BNB-USD", "PEPE20314-USD"],
 )
-interval = st.selectbox("Timeframe Select Karein", ["1h", "1d"])
+
+# Ab yahan 15m, 1h aur 1d teeno pakke show honge
+timeframe_choice = st.selectbox(
+    "Timeframe Select Karein", ["15m", "1h", "1d"]
+)
 
 if st.button("🚀 Strict Signal Nikalein"):
   with st.spinner("Market scan ho rahi hai..."):
     try:
-      df = yf.download(
-          coin_option, period="5d", interval="1h" if interval == "1h" else "1d"
-      )
+      # 15m ke liye period 2 days kar diya hai taake Yahoo error na de
+      if timeframe_choice == "15m":
+        yf_interval = "15m"
+        yf_period = "2d"
+      elif timeframe_choice == "1h":
+        yf_interval = "1h"
+        yf_period = "7d"
+      else:
+        yf_interval = "1d"
+        yf_period = "1mo"
+
+      df = yf.download(coin_option, period=yf_period, interval=yf_interval)
 
       if not df.empty:
         if isinstance(df.columns, pd.MultiIndex):
@@ -43,21 +56,18 @@ if st.button("🚀 Strict Signal Nikalein"):
         current_rsi = float(rsi.iloc[-1])
 
         st.info(
-            f"Current Price: **${current_price:.4f}** | RSI Value:"
-            f" **{current_rsi:.2f}**"
+            f"Timeframe: **{timeframe_choice}** | Current Price:"
+            f" **${current_price:.4f}** | RSI Value: **{current_rsi:.2f}**"
         )
 
-        # Strict Sniper Logic (No Hold allowed if not extreme)
+        # Strict Sniper Logic
         if current_rsi <= 30:
-          # BUY SETUP
           entry = current_price
-          sl = entry * 0.975  # 2.5% Stop Loss
-          tp = entry * 1.06  # 6% Take Profit
+          sl = entry * 0.975
+          tp = entry * 1.06
 
-          st.error(
-              "🟢 **STRONG BUY SIGNAL — ENTRY LO!**"
-          )  # error box for high visibility green look or success
           st.success(
+              f"🟢 **STRONG BUY SIGNAL — ENTRY LO!**\n\n"
               f"• **Action:** BUY / LONG\n"
               f"• **Entry Price:** ${entry:.4f}\n"
               f"• **Stop Loss (SL):** ${sl:.4f} (2.5% Risk)\n"
@@ -65,13 +75,12 @@ if st.button("🚀 Strict Signal Nikalein"):
           )
 
         elif current_rsi >= 70:
-          # SELL SETUP
           entry = current_price
-          sl = entry * 1.025  # 2.5% Stop Loss above
-          tp = entry * 0.94  # 6% Take Profit below
+          sl = entry * 1.025
+          tp = entry * 0.94
 
           st.error(
-              "🔴 **STRONG SELL SIGNAL — SHORT ENTRY LO!**\n\n"
+              f"🔴 **STRONG SELL SIGNAL — SHORT ENTRY LO!**\n\n"
               f"• **Action:** SELL / SHORT\n"
               f"• **Entry Price:** ${entry:.4f}\n"
               f"• **Stop Loss (SL):** ${sl:.4f} (2.5% Risk)\n"
@@ -79,7 +88,6 @@ if st.button("🚀 Strict Signal Nikalein"):
           )
 
         else:
-          # NO ENTRY
           st.warning(
               "❌ **KOI SIGNAL NAHI — ABHI ENTRY MAT LO!**\nMarket beech mein"
               " phansi hai (Neutral Zone). Fake breakout se bachne ke liye"
@@ -87,6 +95,9 @@ if st.button("🚀 Strict Signal Nikalein"):
           )
 
       else:
-        st.error("Data nahi mila. Dobara koshish karein.")
+        st.error(
+            "Data nahi mila. Is timeframe par data available nahi hai, doosra"
+            " select karein."
+        )
     except Exception as e:
       st.error(f"Error aa gaya: {e}")
